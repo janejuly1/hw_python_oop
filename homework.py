@@ -8,8 +8,9 @@ class Record:
                  date=None) -> None:
         self.amount = amount
         self.comment = comment
+
         if date is None:
-            self.date = dt.datetime.now().date()
+            self.date = dt.date.today()
         elif type(date) == str:
             self.date = dt.datetime.strptime(date, '%d.%m.%Y').date()
         else:
@@ -25,21 +26,20 @@ class Calculator:
         self.records.append(record)
 
     def get_today_stats(self):
-        today_sum = 0
-        for r in self.records:
-            if r.date == dt.datetime.now().date():
-                today_sum += r.amount
+        today = dt.date.today()
 
-        return today_sum
+        return sum(record.amount for record in self.records
+                   if record.date == today)
 
     def get_week_stats(self):
         week_ago = (dt.datetime.now() - dt.timedelta(days=7)).date()
-        week_sum = 0
-        for r in self.records:
-            if week_ago <= r.date <= dt.datetime.now().date():
-                week_sum += r.amount
+        today = dt.date.today()
 
-        return week_sum
+        return sum(record.amount for record in self.records
+                   if week_ago <= record.date <= today)
+
+    def today_remained(self):
+        return self.limit - self.get_today_stats()
 
 
 class CashCalculator(Calculator):
@@ -47,36 +47,40 @@ class CashCalculator(Calculator):
     EURO_RATE = 70.0
 
     def get_today_cash_remained(self, currency):
-        coeff = 1
-        cur_name = "руб"
-        if currency == "usd":
-            coeff = 1 / self.USD_RATE
-            cur_name = "USD"
-        elif currency == "eur":
-            coeff = 1 / self.EURO_RATE
-            cur_name = "Euro"
+        currency_dict = {
+            "rub": {"coeff": 1.0, "name": "руб"},
+            "usd": {"coeff": self.USD_RATE, "name": "USD"},
+            "eur": {"coeff": self.EURO_RATE, "name": "Euro"},
+        }
 
-        balance = round(abs(self.limit - self.get_today_stats()) * coeff, 2)
+        if currency not in currency_dict.keys():
+            return None
 
-        if self.get_today_stats() < self.limit:
+        today_remained = self.today_remained()
 
-            return f'На сегодня осталось {balance} {cur_name}'
-
-        elif self.get_today_stats() == self.limit:
-
+        if today_remained == 0:
             return 'Денег нет, держись'
 
-        elif self.get_today_stats() > self.limit:
+        balance = round(abs(today_remained)
+                        / currency_dict[currency]["coeff"], 2)
 
-            return f'Денег нет, держись: твой долг - {balance} {cur_name}'
+        if today_remained > 0:
+            return (f'На сегодня осталось {balance} '
+                    + f'{currency_dict[currency]["name"]}')
+
+        else:
+            return (f'Денег нет, держись: твой долг - {balance} '
+                    + f'{currency_dict[currency]["name"]}')
 
 
 class CaloriesCalculator(Calculator):
     def get_calories_remained(self):
-        calories = self.limit - self.get_today_stats()
-        if self.get_today_stats() < self.limit:
+        today_calories = self.today_remained()
+
+        if today_calories > 0:
             return ('Сегодня можно съесть что-нибудь ещё, '
-                    + f'но с общей калорийностью не более {calories} кКал')
+                    + 'но с общей калорийностью не более '
+                    + f'{today_calories} кКал')
 
         else:
             return 'Хватит есть!'
