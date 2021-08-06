@@ -1,5 +1,5 @@
 import datetime as dt
-
+from collections import defaultdict
 
 class Record:
     def __init__(self,
@@ -53,7 +53,7 @@ class CashCalculator(Calculator):
             "eur": {"coeff": self.EURO_RATE, "name": "Euro"},
         }
 
-        if currency not in currency_dict.keys():
+        if currency not in currency_dict:
             return None
 
         today_remained = self.today_remained()
@@ -61,16 +61,15 @@ class CashCalculator(Calculator):
         if today_remained == 0:
             return 'Денег нет, держись'
 
-        balance = round(abs(today_remained)
-                        / currency_dict[currency]["coeff"], 2)
+        coeff = currency_dict[currency]["coeff"]
+        balance = round(abs(today_remained / coeff), 2)
+        name = currency_dict[currency]["name"]
 
         if today_remained > 0:
-            return (f'На сегодня осталось {balance} '
-                    + f'{currency_dict[currency]["name"]}')
+            return (f'На сегодня осталось {balance} {name}')
 
         else:
-            return (f'Денег нет, держись: твой долг - {balance} '
-                    + f'{currency_dict[currency]["name"]}')
+            return (f'Денег нет, держись: твой долг - {balance} {name}')
 
 
 class CaloriesCalculator(Calculator):
